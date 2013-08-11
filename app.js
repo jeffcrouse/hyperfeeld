@@ -34,6 +34,21 @@ app.get('/', function(req, res){
 	res.render("index", {"title": "brainz.io"});
 });
 
+app.get('/user', function(req, res){
+	var data = {"title": "brainz.io"};
+	data.colors = [
+		  {"name": "Red", "hex": "FF6363"}
+		, {"name": "Orange", "hex": "FFB62E"}
+		, {"name": "Yellow", "hex": "DEDE40"}
+		, {"name": "Green", "hex": "4FE63C"}
+		, {"name": "Blue", "hex": "00B7C4"}
+		, {"name": "Indigo", "hex": "8366D4"}
+		, {"name": "Violet", "hex": "E33BCF"}
+	];
+	res.render("user", data);
+});
+
+
 
 http.createServer(app).listen(app.get('port'), function(){
 	console.log("Express server listening on port " + app.get('port'));
