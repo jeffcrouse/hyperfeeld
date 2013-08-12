@@ -7,8 +7,38 @@ var express = require('express')
 	//, routes = require('./routes')
 	//, user = require('./routes/user')
 	, http = require('http')
-	, path = require('path');
+	, path = require('path')
+	, mongoose = require('mongoose')
+	, WebSocketServer = require('ws').Server
 
+
+
+/**
+*	Configure database
+*/
+mongoose.connect('mongodb://hyperfeel:pinguinshavefeelings@ds035237.mongolab.com:35237/hyperfeel');
+var db = mongoose.connection;
+db.on('error', console.error.bind(console, 'connection error:'));
+db.once('open', function callback () {
+	console.log("connected to database.")
+});
+
+var journeySchema = mongoose.Schema({
+      created_at: Date
+    , nsid: Number
+    , data: [{
+    	  attention: Number
+    	, meditation: Number
+    	, time: Date
+    }] 
+});
+var Journey = mongoose.model('Journey', journeySchema);
+
+
+
+/**
+*	Configure app
+*/
 var app = express();
 
 app.configure(function(){
@@ -49,6 +79,19 @@ app.get('/user', function(req, res){
 });
 
 
+app.post('/submit/journey', function(req, res) {
+	var journey = new Journey(req.body);
+	journey.save(function(err, doc){
+		if(err) {
+			res.send({"error": err})
+			console.log(err)
+		} else {
+			viz_server.broadcast(JSON.stringify(doc));
+			res.send({"status": "OK"});
+		}
+	});
+});
+
 
 http.createServer(app).listen(app.get('port'), function(){
 	console.log("Express server listening on port " + app.get('port'));
@@ -59,23 +102,40 @@ http.createServer(app).listen(app.get('port'), function(){
 
 
 /**
-*	Websocket!
+*	viz_server Websocket!
 */
-var WebSocketServer = require('ws').Server
-  , wss = new WebSocketServer({port: 8080});
-wss.on('connection', function(ws) {
+var viz_clients = [];
+var viz_server = new WebSocketServer({port: 8080});
+viz_server.on('connection', function(client) {
+	viz_clients.push( client );
+
+	// Send all of the existing 
+	Journey.find().sort('-created_at').exec(function(err, docs){
+		client.send(JSON.stringify(docs));
+	});
 
 	var tick = setInterval(function(){
 		var msg = {"route": "tick", "message": {"date": new Date()}};
-		ws.send(JSON.stringify(msg), function(error){ if(error) console.log(error) });
+		client.send(JSON.stringify(msg), function(error){ if(error) console.log(error) });
 	}, 1000);
 
-	ws.on('message', function(message) {
+	viz_server.on('message', function(message) {
 		console.log('received: %s', message);
 	});
 
-	ws.on('close', function() {
+	viz_server.on('close', function() {
 		clearInterval(tick);
+		for(var i=0; i<viz_clients.length; i++) {
+			if(viz_clients[i]==client) viz_clients.splice(i, 1);
+		}
 		console.log("client closed.")
 	});
 });
+viz_server.broadcast = function(message) {
+	for(var i=0; i<viz_clients.length; i++) {
+		viz_clients[i].send(journey, function(err){})
+	}
+}
+
+
+

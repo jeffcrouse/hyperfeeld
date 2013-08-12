@@ -33,7 +33,6 @@
 			<a href="#" id="send-btn" class="btn btn-primary btn-lg">Send</a>
 		</div>
 
-
 		<div id="info">
 		</div>
 
@@ -51,93 +50,40 @@
 
 
 		<hr />
-
-		Simulator:
-		<div class="btn-group btn-group-justified" id="simulator">
-			<a href="#" id="simulator-on-btn" class="btn btn-default btn-lg active">on</a>
-			<a href="#" id="simulator-off-btn" class="btn btn-default btn-lg">off</a>
+		<div id="simulator-container">
+			Simulator:
+			<div class="btn-group btn-group-justified" id="simulator">
+				<a href="#" id="simulator-on-btn" class="btn btn-default btn-lg active">on</a>
+				<a href="#" id="simulator-off-btn" class="btn btn-default btn-lg">off</a>
+			</div>
 		</div>
-
     </div> <!-- /container -->
+
+
+
+
+	<!-- Modal -->
+	<div class="modal fade" id="myModal">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+					<h4 class="modal-title">No device detected</h4>
+				</div>
+				<div class="modal-body">
+					No Neurosky device detected.  Use simulator?
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-default">Reload</button>
+					<button type="button" class="btn btn-primary" data-dismiss="modal">Enable Simulator</button>
+				</div>
+			</div><!-- /.modal-content -->
+		</div><!-- /.modal-dialog -->
+	</div><!-- /.modal -->
 
 
     <script src="http://code.jquery.com/jquery.js"></script>
     <script src="/js/bootstrap.min.js"></script>
-    <script src="/js/requestAnimFrame.js"></script>
-    <script>
-    var start, stop;
-	var data = [];
-    $('#colors a[data-value="Red"]').addClass("active");
-    var bSimulateDevice = true;
-    var bRecording = false;
-
-    $(function(){
-    	$("#colors a").click(function(){
-    		$("#colors a").removeClass("active");
-    		$(this).addClass("active");
-    	});
-
-    	$("#start-btn").click(startRecording);
-    	$("#stop-btn").click(stopRecording);
-    	$("#send-btn").click(sendData);
-    	$("#simulator-on-btn").click(simulatorOn);
-    	$("#simulator-off-btn").click(simulatorOff)
-    	setInterval(update, 100);
-    })
-
-    function update() {
-    	if(bSimulateDevice) {
-			onData({"attention": Math.random(), "meditation": Math.random(), "date": new Date()});
-		}
-		$("#info").text("Data: "+data.length)
-    }
-
-    function startRecording() {
-		$("#control a").removeClass("active");
-		$(this).addClass("active");
-    	start = new Date();
-    	bRecording = true;
-    }
-
-    function stopRecording() {
-    	$("#control a").removeClass("active");
-    	$("#stop-btn").addClass("active");
-    	stop = new Date();
-    	bRecording = false;
-    }
-
-    function sendData() {
-    	stopRecording()
-    	var color = $('#colors a.active').attr("data-value");
-    	data = [];
-    	// send data to server here
-    }
-
-    function simulatorOn() {
-    	$("#simulator a").removeClass("active");
-    	$(this).addClass("active");
-    	bSimulateDevice = true;
-    }
-    function simulatorOff() {
-		$("#simulator a").removeClass("active");
-    	$(this).addClass("active");
-    	bSimulateDevice = false;
-    }
-
-    /**
-    *	This function is called from the iOS app -OR- in animate() if bSimulateDevice is true
-    */
-    function onData( d ) {
-    	if(bRecording) {
-    		data.push(d);
-    	}
-
-    	var attention = Math.ceil(d.attention*100)+"%";
-    	var meditation = Math.ceil(d.meditation*100)+"%";
-    	$("#attention .progress-bar").css("width", attention);
-    	$("#meditation .progress-bar").css("width", meditation);
-    }
-
-    </script>
+    <script src="/js/user.js"></script>
   </body>
 </html>
