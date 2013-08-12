@@ -1,8 +1,8 @@
-var start, stop;
 var data = [];
 $('#colors a[data-value="Red"]').addClass("active");
-var bSimulateDevice = false;
 var bRecording = false;
+var simulatorInterval = null;
+
 
 $(function(){
 
@@ -13,19 +13,17 @@ $(function(){
 		$(this).addClass("active");
 	});
 
-	$("#start-btn").click(startRecording);
-	$("#stop-btn").click(stopRecording);
-	$("#send-btn").click(submitJourney);
-	$("#simulator-on-btn").click(simulatorOn);
-	$("#simulator-off-btn").click(simulatorOff)
-	setInterval(update, 100);
+	$("#btn-start").click(startRecording);
+	$("#btn-stop").click(stopRecording);
+	$("#btn-send").click(submitJourney);
+	$("#btn-enable-simulator").click(enableSimulator);
+	$("#btn-reload").click(function(){location.reload()});
 })
 
-function update() {
-	if(bSimulateDevice) {
+function enableSimulator() {
+	simulatorInterval = setInterval(function(){
 		onData({"attention": Math.random(), "meditation": Math.random(), "date": new Date()});
-	}
-	$("#info").text("Data: "+data.length)
+	}, 100);
 }
 
 function reset() {
@@ -35,14 +33,12 @@ function reset() {
 function startRecording() {
 	$("#control a").removeClass("active");
 	$(this).addClass("active");
-	start = new Date();
 	bRecording = true;
 }
 
 function stopRecording() {
 	$("#control a").removeClass("active");
 	$("#stop-btn").addClass("active");
-	stop = new Date();
 	bRecording = false;
 }
 
@@ -57,7 +53,7 @@ function submitJourney() {
 
 	$.post("/submit/journey", journey, function(data) {
 		if(data.error) {
-			alert("There was an error submitting your data: "+data.error);
+			console.log("There was an error submitting your data: "+data.error);
 		} else {
 			reset();
 		}
@@ -65,30 +61,15 @@ function submitJourney() {
 	.done(function() { alert("second success"); })
 	.fail(function() { alert("error"); })
 	.always(function() { alert("finished"); });
-
-	// send data to server here
 }
+
 
 function accessoryStatus(status) {
 	if(status=="NO_ACCESSORY") {
-
+		$('#myModal').modal()
 	} else if("OK") {
-
+		if(simulatorInterval) clearInterval(simulatorInterval);
 	}
-}
-
-
-
-function simulatorOn() {
-	$("#simulator a").removeClass("active");
-	$(this).addClass("active");
-	bSimulateDevice = true;
-}
-
-function simulatorOff() {
-	$("#simulator a").removeClass("active");
-	$(this).addClass("active");
-	bSimulateDevice = false;
 }
 
 /**
@@ -103,4 +84,5 @@ function onData( d ) {
 	var meditation = Math.ceil(d.meditation*100)+"%";
 	$("#attention .progress-bar").css("width", attention);
 	$("#meditation .progress-bar").css("width", meditation);
+	$("#info").text("Data: "+data.length);
 }

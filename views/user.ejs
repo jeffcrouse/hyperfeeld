@@ -28,9 +28,9 @@
 		<hr />
 
 		<div class="btn-group btn-group-justified" id="control">
-			<a href="#" id="start-btn" class="btn btn-success btn-lg">Start</a>
-			<a href="#" id="stop-btn" class="btn btn-danger btn-lg active">Stop</a>
-			<a href="#" id="send-btn" class="btn btn-primary btn-lg">Send</a>
+			<a href="#" id="btn-start" class="btn btn-success btn-lg">Start</a>
+			<a href="#" id="btn-stop" class="btn btn-danger btn-lg active">Stop</a>
+			<a href="#" id="btn-send" class="btn btn-primary btn-lg">Send</a>
 		</div>
 
 		<div id="info">
@@ -48,7 +48,7 @@
 			<div class="progress-bar progress-bar-success" style="width: 60%;"></div>
 		</div>
 
-
+		<!--
 		<hr />
 		<div id="simulator-container">
 			Simulator:
@@ -57,9 +57,8 @@
 				<a href="#" id="simulator-off-btn" class="btn btn-default btn-lg">off</a>
 			</div>
 		</div>
+	-->
     </div> <!-- /container -->
-
-
 
 
 	<!-- Modal -->
@@ -74,8 +73,8 @@
 					No Neurosky device detected.  Use simulator?
 				</div>
 				<div class="modal-footer">
-					<button type="button" class="btn btn-default">Reload</button>
-					<button type="button" class="btn btn-primary" data-dismiss="modal">Enable Simulator</button>
+					<button type="button" class="btn btn-default" id="btn-reload" data-dismiss="modal">Reload</button>
+					<button type="button" class="btn btn-primary" id="btn-enable-simulator" data-dismiss="modal">Enable Simulator</button>
 				</div>
 			</div><!-- /.modal-content -->
 		</div><!-- /.modal-dialog -->

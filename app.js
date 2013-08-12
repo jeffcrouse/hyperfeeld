@@ -25,7 +25,7 @@ db.once('open', function callback () {
 
 var journeySchema = mongoose.Schema({
       created_at: Date
-    , nsid: Number
+    , nsid: String
     , data: [{
     	  attention: Number
     	, meditation: Number
@@ -83,7 +83,7 @@ app.post('/submit/journey', function(req, res) {
 	var journey = new Journey(req.body);
 	journey.save(function(err, doc){
 		if(err) {
-			res.send({"error": err})
+			res.send({"error": err});
 			console.log(err)
 		} else {
 			viz_server.broadcast(JSON.stringify(doc));
