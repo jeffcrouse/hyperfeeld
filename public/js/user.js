@@ -22,6 +22,24 @@ $(function(){
 
 function enableSimulator() {
 	simulatorInterval = setInterval(function(){
+
+		var d = {
+			"poorSignal" : 0,
+			"eegLowGamma" : 14936,
+			"eegDelta" : 644709,
+			"eSenseAttention" : 56,
+			"eegHighBeta" : 22077,
+			"eegTheta" : 266277,
+			"eegLowBeta" : 40534,
+			"eSenseMeditation" : 54,
+			"eegHighGamma" : 26642,
+			"eegLowAlpha" : 90809,
+			"eegHighAlpha" : 18006,
+			"rawCount" : 512
+		}
+
+
+
 		onData({"attention": Math.random(), "meditation": Math.random(), "date": new Date()});
 	}, 100);
 }
@@ -74,6 +92,24 @@ function accessoryStatus(status) {
 
 /**
 *	This function is called from the iOS app -OR- in animate() if bSimulateDevice is true
+	{
+	  "poorSignal" : 0,
+	  "eegLowGamma" : 14936,
+	  "eegDelta" : 644709,
+	  "eSenseAttention" : 56,
+	  "eegHighBeta" : 22077,
+	  "eegTheta" : 266277,
+	  "eegLowBeta" : 40534,
+	  "eSenseMeditation" : 54,
+	  "eegHighGamma" : 26642,
+	  "eegLowAlpha" : 90809,
+	  "eegHighAlpha" : 18006,
+	  "rawCount" : 512
+	}
+
+	{
+		"blinkStrength" : 82
+	}
 */
 function onData( d ) {
 	if(bRecording) {

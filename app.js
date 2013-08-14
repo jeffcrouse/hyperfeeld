@@ -10,7 +10,7 @@ var express = require('express')
 	, path = require('path')
 	, mongoose = require('mongoose')
 	, WebSocketServer = require('ws').Server
-
+	, os = require("os")
 
 
 /**
@@ -106,6 +106,7 @@ http.createServer(app).listen(app.get('port'), function(){
 */
 var viz_clients = [];
 var viz_server = new WebSocketServer({port: 8080});
+console.log("visualization server running at ws://%s:8080", os.hostname());
 viz_server.on('connection', function(client) {
 	viz_clients.push( client );
 
@@ -119,11 +120,11 @@ viz_server.on('connection', function(client) {
 		client.send(JSON.stringify(msg), function(error){ if(error) console.log(error) });
 	}, 1000);
 
-	viz_server.on('message', function(message) {
+	client.on('message', function(message) {
 		console.log('received: %s', message);
 	});
 
-	viz_server.on('close', function() {
+	client.on('close', function() {
 		clearInterval(tick);
 		for(var i=0; i<viz_clients.length; i++) {
 			if(viz_clients[i]==client) viz_clients.splice(i, 1);
@@ -136,6 +137,61 @@ viz_server.broadcast = function(message) {
 		viz_clients[i].send(journey, function(err){})
 	}
 }
+
+
+
+
+/**
+*	tg_server Websocket!
+*/
+var tg_clients = [];
+var tg_server = new WebSocketServer({port: 8081});
+console.log("ThinkGear server running at ws://%s:8081", os.hostname());
+tg_server.on('connection', function(client) {
+	tg_clients.push( client );
+
+	var readings = [];
+	client.on('message', function(message) {
+
+		var message = JSON.parse(message);
+		if(message.route == "data") {
+			console.log( message.data );
+			readings.push( message.data );
+			client.send(JSON.stringify({"route": "info", "numReadings": readings.length}));
+		}
+		if(message.route == "submit") {
+			/*
+			var journey = new Journey(req.body);
+			journey.save(function(err, doc){
+				if(err) {
+					res.send({"error": err});
+					console.log(err)
+				} else {
+					viz_server.broadcast(JSON.stringify(doc));
+					res.send({"status": "OK"});
+				}
+			});
+			*/
+			readings = []
+			client.send(JSON.stringify({"route": "info", "numReadings": readings.length}));
+		}
+		if(message.route == "reset") {
+			readings = []
+			client.send(JSON.stringify({"route": "info", "numReadings": readings.length}));
+		}
+	});
+
+	client.on('close', function() {
+		var index = tg_clients.indexOf(client);
+		if(index != -1) {
+			console.log("removing client from list");
+			tg_clients.splice(index, 1);
+		}
+		console.log("client closed.")
+	});
+});
+
+
 
 
 
