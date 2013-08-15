@@ -24,13 +24,9 @@ db.once('open', function callback () {
 });
 
 var journeySchema = mongoose.Schema({
-      created_at: Date
-    , nsid: String
-    , data: [{
-    	  attention: Number
-    	, meditation: Number
-    	, time: Date
-    }] 
+      created_at: { type: Date, default: Date.now }
+    , client_id: String
+    , readings: [mongoose.Schema.Types.Mixed] 
 });
 var Journey = mongoose.model('Journey', journeySchema);
 
@@ -64,8 +60,8 @@ app.get('/', function(req, res){
 	res.render("index", {"title": "brainz.io"});
 });
 
-app.get('/user', function(req, res){
-	var data = {"title": "brainz.io"};
+app.get('/simulator', function(req, res){
+	var data = {"title": "Simulator"};
 	data.colors = [
 		  {"name": "Red", "hex": "FF6363"}
 		, {"name": "Orange", "hex": "FFB62E"}
@@ -75,7 +71,7 @@ app.get('/user', function(req, res){
 		, {"name": "Indigo", "hex": "8366D4"}
 		, {"name": "Violet", "hex": "E33BCF"}
 	];
-	res.render("user", data);
+	res.render("simulator", data);
 });
 
 
@@ -151,30 +147,38 @@ tg_server.on('connection', function(client) {
 	tg_clients.push( client );
 
 	var readings = [];
-	client.on('message', function(message) {
 
+	client.on('message', function(message) {
 		var message = JSON.parse(message);
-		if(message.route == "data") {
-			console.log( message.data );
-			readings.push( message.data );
+
+		if(message.route == "reading") {
+			console.log( "message.client_id = " + message.client_id );
+
+			var date = new Date(message.timestamp*1000);
+			readings.push( {"data": message.reading, "date": date });
 			client.send(JSON.stringify({"route": "info", "numReadings": readings.length}));
 		}
+
 		if(message.route == "submit") {
-			/*
-			var journey = new Journey(req.body);
-			journey.save(function(err, doc){
-				if(err) {
-					res.send({"error": err});
-					console.log(err)
-				} else {
-					viz_server.broadcast(JSON.stringify(doc));
-					res.send({"status": "OK"});
-				}
-			});
-			*/
-			readings = []
-			client.send(JSON.stringify({"route": "info", "numReadings": readings.length}));
+			if(readings.length < 20) {
+				client.send(JSON.stringify({"route": "saveStatus", "status": "not enough readings"}));
+			} else {
+				var journey = new Journey({readings: readings, client_id: message.client_id });
+				journey.save(function(err, doc){
+					if(err) {
+						client.send(JSON.stringify({"route": "saveStatus", "status": err}));
+						console.log(err)
+					} else {
+						viz_server.broadcast(JSON.stringify(doc));
+						client.send(JSON.stringify({"route": "saveStatus", "status": "OK"}));
+					}
+				});
+				
+				readings = []
+				client.send(JSON.stringify({"route": "info", "numReadings": readings.length}));
+			}
 		}
+
 		if(message.route == "reset") {
 			readings = []
 			client.send(JSON.stringify({"route": "info", "numReadings": readings.length}));
