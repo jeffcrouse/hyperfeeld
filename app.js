@@ -154,7 +154,7 @@ viz_server.on('connection', function(client) {
 });
 viz_server.broadcast = function(message) {
 	for(var i=0; i<viz_clients.length; i++) {
-		viz_clients[i].send(journey, function(err){})
+		viz_clients[i].send(message, function(err){})
 	}
 }
 
