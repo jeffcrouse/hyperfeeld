@@ -6,7 +6,9 @@ var readingTimeout;
 var bSendingData = false;
 var journeyDuration = 0;
 
-function init(ws_host) {
+$(init)
+
+function init() {
 	$("#colors a").click(function(){
 		$("#colors a").removeClass("active");
 		$(this).addClass("active");

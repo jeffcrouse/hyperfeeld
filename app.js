@@ -4,8 +4,7 @@
  */
 
 var express = require('express')
-	//, routes = require('./routes')
-	//, user = require('./routes/user')
+	, engine = require('ejs-locals')
 	, http = require('http')
 	, path = require('path')
 	, mongoose = require('mongoose')
@@ -41,6 +40,7 @@ app.configure(function(){
 	app.set('port', process.env.PORT || 3000);
 	app.set('views', __dirname + '/views');
 	app.set('view engine', 'ejs');
+	app.engine('ejs', engine);
 	app.use(express.favicon());
 	app.use(express.logger('dev'));
 	app.use(express.bodyParser());
@@ -57,7 +57,11 @@ app.configure('development', function(){
 });
 
 app.get('/', function(req, res){
-	res.render("index", {"title": "brainz.io"});
+	res.render("index", {});
+});
+
+app.get('/admin', function(req, res){
+	res.render("admin", {});
 });
 
 app.get('/simulator', function(req, res){

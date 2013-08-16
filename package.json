@@ -10,6 +10,7 @@
     "ejs": "*",
     "less-middleware": "*",
     "ws": "~0.4.27",
-    "mongoose": "~3.6.16"
+    "mongoose": "~3.6.16",
+    "ejs-locals": "~1.0.2"
   }
 }
