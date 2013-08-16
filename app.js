@@ -127,7 +127,7 @@ viz_server.on('connection', function(client) {
 	});
 
 	var tick = setInterval(function(){
-		var msg = {"route": "tick", "message": {"date": new Date()}};
+		var msg = {"route": "tick", "date": new Date()};
 		client.send(JSON.stringify(msg), function(error){ if(error) console.log(error) });
 	}, 1000);
 
@@ -189,22 +189,26 @@ tg_server.on('connection', function(client) {
 		}
 
 		if(message.route == "submit") {
-			if(readings.length < 20) {
+			if(readings.length < 40) {
 				client.send(JSON.stringify({"route": "saveStatus", "status": "not enough readings"}));
 			} else {
-				var journey = new Journey({readings: readings, client_id: message.client_id });
+				var journey = new Journey({readings: readings, client_id: parseInt(message.client_id)});
+				journey.created_at = new Date();
+				console.log("Saving Journey created_at "+journey.created_at)
 				journey.save(function(err, doc){
 					if(err) {
 						client.send(JSON.stringify({"route": "saveStatus", "status": err}));
 						console.log(err)
 					} else {
-						viz_server.broadcast(JSON.stringify(doc));
 						client.send(JSON.stringify({"route": "saveStatus", "status": "OK"}));
+					
+						var message = {"route": "journey", "journey": doc};
+						viz_server.broadcast(JSON.stringify(message));
+
+						readings = []
+						client.send(JSON.stringify({"route": "info", "numReadings": readings.length}));
 					}
 				});
-				
-				readings = []
-				client.send(JSON.stringify({"route": "info", "numReadings": readings.length}));
 			}
 		}
 
