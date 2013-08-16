@@ -65,17 +65,8 @@ app.get('/admin', function(req, res){
 });
 
 app.get('/simulator', function(req, res){
-	var ws;
-	switch(os.hostname()) {
-		case "silo001":
-			ws = "ws://brainz.io:8081";
-			break;
-		default:
-			ws = util.format("ws://%s:8081", os.hostname());
-			break;
-	}
 
-	var data = {"title": "Simulator", "ws": ws};
+	var data = {"title": "Simulator", "ws": tg_ws_url};
 	data.colors = [
 		  {"name": "Red", "hex": "FF6363"}
 		, {"name": "Orange", "hex": "FFB62E"}
@@ -119,10 +110,20 @@ var viz_server = new WebSocketServer({port: 8080});
 console.log("visualization server running at ws://%s:8080", os.hostname());
 viz_server.on('connection', function(client) {
 	viz_clients.push( client );
+	console.log("viz client connected");
 
 	// Send all of the existing 
+	console.log("sending all journeys...");
 	Journey.find().sort('-created_at').exec(function(err, docs){
-		client.send(JSON.stringify(docs));
+		if(err) {
+			console.log(err)
+		} else {
+			var message = {"route": "init", "journeys": docs};
+			client.send(JSON.stringify(message), function(error){ 
+				if(error) console.log(error);
+				else console.log("journeys sent.");
+			});
+		}
 	});
 
 	var tick = setInterval(function(){
@@ -130,17 +131,26 @@ viz_server.on('connection', function(client) {
 		client.send(JSON.stringify(msg), function(error){ if(error) console.log(error) });
 	}, 1000);
 
+	// ON MESSAGE
 	client.on('message', function(message) {
 		console.log('received: %s', message);
 	});
 
+	// ON CLOSE
 	client.on('close', function() {
 		clearInterval(tick);
-		for(var i=0; i<viz_clients.length; i++) {
-			if(viz_clients[i]==client) viz_clients.splice(i, 1);
+		var index = viz_clients.indexOf(client);
+		if(index != -1) {
+			console.log("removing client from list");
+			viz_clients.splice(index, 1);
 		}
 		console.log("client closed.")
 	});
+
+	// ON ERROR
+	client.on('error', function(err){
+		console.log("error: "+err);
+	})
 });
 viz_server.broadcast = function(message) {
 	for(var i=0; i<viz_clients.length; i++) {
@@ -154,9 +164,14 @@ viz_server.broadcast = function(message) {
 /**
 *	tg_server Websocket!
 */
+var tg_ws_url;
+switch(os.hostname()) {
+	case "silo001": tg_ws_url = "ws://brainz.io:8081";	break;
+	default: 		tg_ws_url = util.format("ws://%s:8081", os.hostname()); break;
+}
 var tg_clients = [];
 var tg_server = new WebSocketServer({port: 8081});
-console.log("ThinkGear server running at ws://%s:8081", os.hostname());
+console.log("ThinkGear server running at %s", tg_ws_url);
 tg_server.on('connection', function(client) {
 	tg_clients.push( client );
 

@@ -22,7 +22,7 @@ function init() {
 		}  
 
 		socket.onmessage = function(msg){  
-			console.log(msg);
+			//console.log(msg);
 			var json = JSON.parse(msg.data);
 			if(json.route=="info") {
 				$("#info").html("Readings received: "+json.numReadings);
