@@ -65,7 +65,16 @@ app.get('/admin', function(req, res){
 });
 
 app.get('/simulator', function(req, res){
-	var ws = util.format("ws://%s:8081", os.hostname());
+	var ws;
+	switch(os.hostname()) {
+		case "silo001":
+			ws = "ws://brainz.io:8081";
+			break;
+		default:
+			ws = util.format("ws://%s:8081", os.hostname());
+			break;
+	}
+
 	var data = {"title": "Simulator", "ws": ws};
 	data.colors = [
 		  {"name": "Red", "hex": "FF6363"}
