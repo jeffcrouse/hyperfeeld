@@ -11,7 +11,7 @@ var express = require('express')
 	, mongoose = require('mongoose')
 	, WebSocketServer = require('ws').Server
 	, os = require("os")
-
+	, util = require("util")
 
 /**
 *	Configure database
@@ -61,7 +61,8 @@ app.get('/', function(req, res){
 });
 
 app.get('/simulator', function(req, res){
-	var data = {"title": "Simulator"};
+	var ws = util.format("ws://%s:8081", os.hostname());
+	var data = {"title": "Simulator", "ws": ws};
 	data.colors = [
 		  {"name": "Red", "hex": "FF6363"}
 		, {"name": "Orange", "hex": "FFB62E"}
