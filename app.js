@@ -186,7 +186,17 @@ viz_server.on('connection', function(client) {
 
 	// ON MESSAGE
 	client.on('message', function(message) {
-		console.log('received: %s', message);
+		message = JSON.parse(message);
+		
+		if(message.route=="removeJourney") {
+			console.log("removing "+message._id);
+			Journey.remove({_id: message._id}, function(err){
+				if (err) 
+					client.send(JSON.stringify({"route": "error", "error": err}))
+				else 
+					client.send(JSON.stringify({"route": "removeJourney", "_id": message._id}))
+			});
+		}
 	});
 
 	// ON CLOSE
@@ -295,8 +305,7 @@ tg_server.on('connection', function(client) {
 						console.log(err)
 					} else {
 						client.send(JSON.stringify({"route": "saveStatus", "status": "OK"}));
-						var message = {"route": "journey", "journey": doc};
-						viz_server.broadcast(JSON.stringify(message));
+						viz_server.broadcast(JSON.stringify({"route": "journey", "journey": doc}));
 					}
 				});
 			}

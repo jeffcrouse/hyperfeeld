@@ -159,7 +159,8 @@ function doReading() {
 		socket.send(JSON.stringify(message));
 	}
 	if(bRecording) {
-		readings.push( data );
+		var timestamp = Math.round(new Date().getTime() / 1000);
+		readings.push( {"reading": data, "timestamp":timestamp} );
 	}
 
 	var wait = 500 + (Math.random() * 400);
@@ -178,7 +179,8 @@ function doBlink() {
 	}
 
 	if(bRecording) {
-		readings.push( data );
+		var timestamp = Math.round(new Date().getTime() / 1000);
+		readings.push( {"reading": data, "timestamp":timestamp} );
 	}
 
 	var wait = 800 + (Math.random() * 200);
