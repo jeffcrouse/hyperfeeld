@@ -159,8 +159,7 @@ function doReading() {
 		socket.send(JSON.stringify(message));
 	}
 	if(bRecording) {
-		var timestamp = Math.round(new Date().getTime() / 1000);
-		readings.push( {"reading": data, "timestamp":timestamp} );
+		readings.push( {"data": data, "date":new Date()} );
 	}
 
 	var wait = 500 + (Math.random() * 400);
@@ -172,15 +171,13 @@ function doBlink() {
 	$("#tg_data").html(JSON.stringify(data, undefined, 2));
 
 	if(bStreaming) {
-		var timestamp = Math.round(new Date().getTime() / 1000);
 		var client_id = $('#colors a.active').attr("data-value");
-		var message = {"client_id": client_id, "route": "reading", "reading": data, "timestamp":timestamp};
+		var message = {"client_id": client_id, "route": "reading", "reading": data, "timestamp":new Date()};
 		socket.send(JSON.stringify(message));
 	}
 
 	if(bRecording) {
-		var timestamp = Math.round(new Date().getTime() / 1000);
-		readings.push( {"reading": data, "timestamp":timestamp} );
+		readings.push( {"data": data, "date":new Date()} );
 	}
 
 	var wait = 800 + (Math.random() * 200);
