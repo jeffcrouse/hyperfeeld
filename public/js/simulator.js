@@ -18,8 +18,7 @@ function init() {
 	});
 
 	try{  
-		socket = new WebSocket(ws_host);  
-
+		socket = new WebSocket("ws://localhost:8081");  
 		socket.onopen = function(){  
 			$("#ws_status").html('Socket Status: '+socket.readyState+' (open)');  
 		}  
@@ -114,16 +113,26 @@ function reset() {
 	*/
 }
 
+function identify() {
+	var client_id = $('#colors a.active').attr("data-value");
+	var timestamp = Math.round(new Date().getTime() / 1000);
+	var message = {"client_id": client_id, "route": "identify", "timestamp": timestamp};
+	console.log(JSON.stringify(message));
+	socket.send(JSON.stringify(message));
+}
+
 function startStream() {
 	$("#stream a").removeClass("active");
 	$("#btn-stream-on").addClass("active");
 	bStreaming = true;
+	identify();
 }
 
 function stopStream() {
 	$("#stream a").removeClass("active");
 	$("#btn-stream-off").addClass("active");
 	bStreaming = false;
+	identify();
 }
 
 function doReading() {

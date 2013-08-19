@@ -70,7 +70,7 @@ app.get('/admin', function(req, res){
 });
 
 app.get('/simulator', function(req, res){
-	var data = {"title": "Simulator", "ws": tg_ws_url};
+	var data = {"title": "Simulator"};
 	data.colors = [
 		  {"name": "Red", "hex": "FF6363"}
 		, {"name": "Orange", "hex": "FFB62E"}
@@ -228,14 +228,9 @@ $$$$$$\    $$$$$$\          $$$$$$$\  $$$$$$\   $$$$$$\ $$\    $$\  $$$$$$\   $$
           \$$$$$$  |                                                                   
            \______/                                                                    
 *********************************************************************************************/
-var tg_ws_url;
-switch(os.hostname()) { // to do:  get rid of this -- in /simulator, just feed in the domain from which the request came
-	case "silo001": tg_ws_url = "ws://brainz.io:8081";	break;
-	default: tg_ws_url = util.format("ws://%s:8081", os.hostname()); break;
-}
 //var tg_clients = [];
 var tg_server = new WebSocketServer({port: 8081});
-console.log("ThinkGear server running at %s", tg_ws_url);
+console.log("BrainProxy server running at ws://%s:8081", os.hostname());
 tg_server.on('connection', function(client) {
 	//tg_clients.push( client );
 
@@ -257,12 +252,13 @@ tg_server.on('connection', function(client) {
 		var message = JSON.parse(message);
 		
 		if(message.route == "identify") {
+			console.log("Client identified: %s", message.client_id);
 			client_id = message.client_id;
 		}
 
 		if(message.route == "reading") {
 			client_id = message.client_id;
-
+			console.log("reading from %s", message.client_id);
 			if(message.reading.blinkStrength && message.reading.blinkStrength > 60) {
 				var note =  notes["C"] + (message.client_id * 12);
 				var vel = message.reading.blinkStrength;
@@ -280,6 +276,9 @@ tg_server.on('connection', function(client) {
 		}
 
 		if(message.route == "submit") {
+			client_id = message.client_id;
+			console.log("journey from %s", message.client_id);
+			
 			if(message.readings.length < 40) {
 				client.send(JSON.stringify({"route": "saveStatus", "status": "not enough readings"}));
 			} else {
