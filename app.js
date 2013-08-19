@@ -11,20 +11,25 @@ var express = require('express')
 	, WebSocketServer = require('ws').Server
 	, os = require("os")
 	, util = require("util")
-
+	, midi = require('midi')
+	, readline = require('readline')
 /**
 *	Configure database
 */
 mongoose.connect('mongodb://hyperfeel:pinguinshavefeelings@ds035237.mongolab.com:35237/hyperfeel');
 var db = mongoose.connection;
 db.on('error', console.error.bind(console, 'connection error:'));
-db.once('open', function callback () {
-	console.log("connected to database.")
+db.once('open', function(err) {
+	if(err) {
+		console.log("Couldn't connect to database!")
+		process.exit();
+	}
 });
 
 var journeySchema = mongoose.Schema({
       created_at: { type: Date, default: Date.now }
     , client_id: String
+    , email: String
     , readings: [mongoose.Schema.Types.Mixed] 
 });
 var Journey = mongoose.model('Journey', journeySchema);
@@ -65,7 +70,6 @@ app.get('/admin', function(req, res){
 });
 
 app.get('/simulator', function(req, res){
-
 	var data = {"title": "Simulator", "ws": tg_ws_url};
 	data.colors = [
 		  {"name": "Red", "hex": "FF6363"}
@@ -79,6 +83,9 @@ app.get('/simulator', function(req, res){
 	res.render("simulator", data);
 });
 
+app.get('/keyboard', function(req, res){
+
+})
 
 app.post('/submit/journey', function(req, res) {
 	var journey = new Journey(req.body);
@@ -96,15 +103,26 @@ app.post('/submit/journey', function(req, res) {
 
 http.createServer(app).listen(app.get('port'), function(){
 	console.log("Express server listening on port " + app.get('port'));
+	rl.prompt();
 });
 
 
 
 
 
-/**
-*	viz_server Websocket!
-*/
+/********************************************************************************************
+           $$\                                                                              
+           \__|                                                                             
+$$\    $$\ $$\ $$$$$$$$\         $$$$$$$\  $$$$$$\   $$$$$$\ $$\    $$\  $$$$$$\   $$$$$$\  
+\$$\  $$  |$$ |\____$$  |       $$  _____|$$  __$$\ $$  __$$\\$$\  $$  |$$  __$$\ $$  __$$\ 
+ \$$\$$  / $$ |  $$$$ _/        \$$$$$$\  $$$$$$$$ |$$ |  \__|\$$\$$  / $$$$$$$$ |$$ |  \__|
+  \$$$  /  $$ | $$  _/           \____$$\ $$   ____|$$ |       \$$$  /  $$   ____|$$ |      
+   \$  /   $$ |$$$$$$$$\        $$$$$$$  |\$$$$$$$\ $$ |        \$  /   \$$$$$$$\ $$ |      
+    \_/    \__|\________|$$$$$$\\_______/  \_______|\__|         \_/     \_______|\__|      
+                         \______|                                                           
+                                                                                            
+                                                                                            
+*********************************************************************************************/
 var viz_clients = [];
 var viz_server = new WebSocketServer({port: 8080});
 console.log("visualization server running at ws://%s:8080", os.hostname());
@@ -161,13 +179,51 @@ viz_server.broadcast = function(message) {
 
 
 
-/**
-*	tg_server Websocket!
-*/
+
+
+
+
+
+
+
+
+var CHANNEL_NOTE_OFF = 128;
+var CHANNEL_NOTE_ON = 144;
+var CHANNEL_CONTROL_CHANGE = 176;
+var notes = { 
+	C:  60, Cs: 61,
+	D:  62, Ds: 63,
+	E:  64,
+	F:  65, Fs: 66,
+	G:  67, Gs: 68,
+	A:  69, As: 70,
+	B:  71
+}
+var midiOut = new midi.output();
+try {
+	midiOut.openPort(0);
+} catch(error) {
+	midiOut.openVirtualPort('tg_server');
+}
+
+
+/*********************************************************************************************
+  $$\                                                                                  
+  $$ |                                                                                 
+$$$$$$\    $$$$$$\          $$$$$$$\  $$$$$$\   $$$$$$\ $$\    $$\  $$$$$$\   $$$$$$\  
+\_$$  _|  $$  __$$\        $$  _____|$$  __$$\ $$  __$$\\$$\  $$  |$$  __$$\ $$  __$$\ 
+  $$ |    $$ /  $$ |       \$$$$$$\  $$$$$$$$ |$$ |  \__|\$$\$$  / $$$$$$$$ |$$ |  \__|
+  $$ |$$\ $$ |  $$ |        \____$$\ $$   ____|$$ |       \$$$  /  $$   ____|$$ |      
+  \$$$$  |\$$$$$$$ |       $$$$$$$  |\$$$$$$$\ $$ |        \$  /   \$$$$$$$\ $$ |      
+   \____/  \____$$ |$$$$$$\\_______/  \_______|\__|         \_/     \_______|\__|      
+          $$\   $$ |\______|                                                           
+          \$$$$$$  |                                                                   
+           \______/                                                                    
+*********************************************************************************************/
 var tg_ws_url;
-switch(os.hostname()) {
+switch(os.hostname()) { // to do:  get rid of this -- in /simulator, just feed in the domain from which the request came
 	case "silo001": tg_ws_url = "ws://brainz.io:8081";	break;
-	default: 		tg_ws_url = util.format("ws://%s:8081", os.hostname()); break;
+	default: tg_ws_url = util.format("ws://%s:8081", os.hostname()); break;
 }
 var tg_clients = [];
 var tg_server = new WebSocketServer({port: 8081});
@@ -175,24 +231,54 @@ console.log("ThinkGear server running at %s", tg_ws_url);
 tg_server.on('connection', function(client) {
 	tg_clients.push( client );
 
-	var readings = [];
+	var attention = attentionTarget = 0;
+	var meditation = meditationTarget = 0;
+	var client_id = null;
+	var updateInterval = setInterval(function(){
+		attention += (attentionTarget-attention) / 10.0;
+		meditation += (meditationTarget-meditation) / 10.0;
+		if(client_id!=null) {
+			var channel = client_id * 10;
+			midiOut.sendMessage([CHANNEL_CONTROL_CHANGE, channel+0, attention]);
+			midiOut.sendMessage([CHANNEL_CONTROL_CHANGE, channel+1, meditation]);	
+		}
+	}, 100);
 
 	client.on('message', function(message) {
 		var message = JSON.parse(message);
+		
+		if(message.route == "identify") {
+			client_id = message.client_id;
+		}
 
 		if(message.route == "reading") {
-			console.log( "message.client_id = " + message.client_id );
+			client_id = message.client_id;
 
-			var date = new Date(message.timestamp*1000);
-			readings.push( {"data": message.reading, "date": date });
-			client.send(JSON.stringify({"route": "info", "numReadings": readings.length}));
+			if(message.reading.blinkStrength && message.reading.blinkStrength > 60) {
+				var note =  notes["C"] + (message.client_id * 12);
+				var vel = message.reading.blinkStrength;
+				midiOut.sendMessage([CHANNEL_NOTE_ON, note, vel]);
+				setTimeout(function(){
+					midiOut.sendMessage([CHANNEL_NOTE_OFF, note, vel]);
+				}, 200);
+			}
+			if(message.reading.eSenseMeditation) {
+				meditationTarget = message.reading.eSenseMeditation;
+			}
+			if(message.reading.eSenseAttention) {
+				attentionTarget = message.reading.eSenseAttention;
+			}
 		}
 
 		if(message.route == "submit") {
-			if(readings.length < 40) {
+			if(message.readings.length < 40) {
 				client.send(JSON.stringify({"route": "saveStatus", "status": "not enough readings"}));
 			} else {
-				var journey = new Journey({readings: readings, client_id: parseInt(message.client_id)});
+				var journey = new Journey({
+					readings: message.readings, 
+					client_id: parseInt(message.client_id), 
+					email: message.email
+				});
 				journey.created_at = new Date();
 				console.log("Saving Journey created_at "+journey.created_at)
 				journey.save(function(err, doc){
@@ -219,6 +305,7 @@ tg_server.on('connection', function(client) {
 	});
 
 	client.on('close', function() {
+		clearInterval(updateInterval);
 		var index = tg_clients.indexOf(client);
 		if(index != -1) {
 			console.log("removing client from list");
@@ -229,6 +316,73 @@ tg_server.on('connection', function(client) {
 });
 
 
+process.on("SIGTERM", function(){
+	midiOut.closePort();
+});
 
 
+
+
+
+var rl = readline.createInterface(process.stdin, process.stdout, null);
+rl.setPrompt('> ');
+rl.on('line', function(input) {
+	input = input.split(" ");
+	cmd = input[0];
+	if(cmd=="midi") {
+		var channel = parseInt(input[1]);
+		var node = parseInt(input[2]);
+		var vel = parseInt(input[3]);
+		console.log("midi("+channel, note, vel+")");
+		midiOut.sendMessage([channel, note, vel]);
+	} else if(cmd=="user") {
+		var client_id = parseInt(input[1]);
+		switch(input[2]) {
+			case "blink":
+				var note = notes["C"] + (client_id * 12);
+				var vel = 60+Math.floor(Math.random()*40);
+				console.log("midi("+CHANNEL_NOTE_ON, note, vel+")");
+				midiOut.sendMessage([CHANNEL_NOTE_ON, note, vel]);
+				setTimeout(function(){
+					console.log("midi("+CHANNEL_NOTE_OFF, note, vel+")");
+					midiOut.sendMessage([CHANNEL_NOTE_OFF, note, vel]);
+				}, 200);
+				break;
+			case "enter":
+				var note = notes["D"] + (client_id * 12);
+				
+				break;
+			case "exit":
+				var note = notes["E"] + (client_id * 12);
+
+				break;
+			case "meditation":
+				var note = notes["F"] + (client_id * 12);
+				var vel = Math.floor(Math.random()*100);
+				midiOut.sendMessage([CHANNEL_CONTROL_CHANGE, node, vel]);
+				break;
+			case "attention":
+				var note = notes["G"] + (client_id * 12);
+				var vel = Math.floor(Math.random()*100);
+				midiOut.sendMessage([CHANNEL_CONTROL_CHANGE, node, vel]);
+				break;
+		}
+
+	} else if(cmd=="quit") {
+		rl.question('Are you sure? (y/n) ', function(answer) {
+			if (answer === 'y') rl.close();
+			else rl.prompt();
+		});
+	} else {
+		console.log("command not recognized.");
+	}
+
+	rl.prompt();
+});
+
+rl.on('close', function() {
+	console.log('Bye');
+	midiOut.closePort();
+	process.exit();
+});
 
