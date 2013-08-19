@@ -10,10 +10,10 @@
 			<div id="ws_status">not connected</div>
 			<hr />
 			<strong>ThinkGear Data</strong>
-			<div id="tg_data">
+			<div id="tg_data" style="height: 200px;">
 			</div>
 		</div>
-		<div class="col-md-8 col-lg-8">
+		<div class="col-md-5 col-lg-5">
 	    	<div class="btn-group btn-group-justified" id="colors">
 	    		<% colors.forEach(function(el, index) { %>
 	    		<a href="#" class="btn btn-default" style="color: #<%= el.hex %>;" data-value="<%= index %>"><%= el.name %></a>
@@ -21,20 +21,34 @@
 	    	</div>
 
 			<hr />
-			<b>send to server</b>
-			<div class="btn-group btn-group-justified" id="simulator">
-				<a href="#" id="btn-simulator-on" class="btn btn-default btn-lg">on</a>
-				<a href="#" id="btn-simulator-off" class="btn btn-default btn-lg active">off</a>
+			<b>Stream (audio generation)</b>
+			<div class="btn-group btn-group-justified" id="stream">
+				<a href="#" id="btn-stream-on" class="btn btn-default btn-lg">on</a>
+				<a href="#" id="btn-stream-off" class="btn btn-default btn-lg active">off</a>
 			</div>
-			<div id="info" style=""></div>
+
+			
 			<hr />
 
+
+			<b>Record (for visualization)</b>
+			<div style="padding-bottom: 10px;">
+				<button id="btn-record" type="button"class="btn btn-primary btn-lg btn-block">Record</button>
+			</div>
+			
+			<div style="padding-bottom: 10px;">
+				<b>Time:</b>  <span id="recordTime">00:00:00</span><br />
+				<b>Readings:</b>  <span id="numReadings">0</span><br />
+			</div>
+
+			
 			<div class="btn-group btn-group-justified" id="control">
 				<a href="#" id="btn-submit" class="btn btn-success btn-lg">Submit</a>
 				<a href="#" id="btn-reset" class="btn btn-danger btn-lg">Reset</a>
 			</div>
 
 		</div>
+
 	</div>
 </div> <!-- /container -->
 

@@ -3,8 +3,11 @@ $('#colors a[data-value="2"]').addClass("active");
 var socket;
 var blinkTimeout;
 var readingTimeout;
-var bSendingData = false;
+var bStreaming = false;
 var journeyDuration = 0;
+var bRecording = false;
+var readings = [];
+var recordElapsedTime = 0;
 
 $(init)
 
@@ -28,6 +31,10 @@ function init() {
 				$("#info").html("Readings received: "+json.numReadings);
 			}
 			if(json.route=="saveStatus"){
+				if(json.status=="OK") {
+					recordElapsedTime = 0;
+					readings = [];
+				}
 				alert("Save Status: "+json.status);
 			}
 		}  
@@ -40,51 +47,86 @@ function init() {
 		$("#ws_status").html('Error'+exception);  
 	}  
 
-	$("#btn-simulator-on").click(startSimulator);
-	$("#btn-simulator-off").click(stopSimulator);
+	$("#btn-stream-on").click(startStream);
+	$("#btn-stream-off").click(stopStream);
 	$("#btn-submit").click(submit);
 	$("#btn-reset").click(reset);
+	$("#btn-record").click(toggleRecord);
 
-	blinkTimeout = setTimeout(sendBlink, 1000);
-	readingTimeout = setTimeout(sendReading, 1000);
+	blinkTimeout = setTimeout(doBlink, 1000);
+	readingTimeout = setTimeout(doReading, 1000);
+	updateTimeout = setInterval(update, 100);
+}
+
+function pad(n, width, z) {
+	z = z || '0';
+	n = n + '';
+	return n.length >= width ? n : new Array(width - n.length + 1).join(z) + n;
+}
+
+function update() {
+
+	if(bRecording) {
+		recordElapsedTime += 100;
+	}
+
+   var hours = Math.floor(recordElapsedTime / 36e5),
+        mins = Math.floor((recordElapsedTime % 36e5) / 6e4),
+        secs = Math.floor((recordElapsedTime % 6e4) / 1000);
+        $('#recordTime').html(pad(hours, 2)+':'+pad(mins, 2)+':'+pad(secs, 2));  
+	$("#numReadings").html(readings.length);
+}
+
+function toggleRecord() {
+	if(bRecording) {
+		$("#btn-record").text("Record");
+		bRecording = false;
+	} else {
+		$("#btn-record").text("Stop");
+		bRecording = true;
+	}
 }
 
 function submit() {
-	stopSimulator();
+	bRecording = false;
+	$("#btn-record").text("Record");
 
 	var client_id = $('#colors a.active').attr("data-value");
 	var timestamp = Math.round(new Date().getTime() / 1000);
-	var message = {"client_id": client_id, "route": "submit", "timestamp": timestamp};
+	var message = {"client_id": client_id, "route": "submit", "timestamp": timestamp, "readings": readings};
 	console.log(JSON.stringify(message));
 	socket.send(JSON.stringify(message));
 }
 
 function reset() {
-	stopSimulator();
+	readings = [];
+	recordElapsedTime = 0;
 
+	$("#btn-record").text("Record");
+	bRecording = false;
+	
+	/*
 	var client_id = $('#colors a.active').attr("data-value");
 	var timestamp = Math.round(new Date().getTime() / 1000);
 	var message = {"client_id": client_id, "route": "reset", "timestamp": timestamp};
 	console.log(JSON.stringify(message));
 	socket.send(JSON.stringify(message));
+	*/
 }
 
-function startSimulator() {
-	$("#simulator a").removeClass("active");
-	$("#btn-simulator-on").addClass("active");
-	bSendingData = true;
-
+function startStream() {
+	$("#stream a").removeClass("active");
+	$("#btn-stream-on").addClass("active");
+	bStreaming = true;
 }
 
-function stopSimulator() {
-	$("#simulator a").removeClass("active");
-	$("#btn-simulator-off").addClass("active");
-	bSendingData = false;
-	//clearTimeout(blinkTimeout);
-	//clearTimeout(readingTimeout);
+function stopStream() {
+	$("#stream a").removeClass("active");
+	$("#btn-stream-off").addClass("active");
+	bStreaming = false;
 }
 
-function sendReading() {
+function doReading() {
 	var data = {
 		"poorSignal" : 0,
 		"eegLowGamma" : Math.ceil(Math.random() * 999999),
@@ -101,29 +143,36 @@ function sendReading() {
 	}
 	$("#tg_data").html(JSON.stringify(data, undefined, 2));
 
-	if(bSendingData) {
+	if(bStreaming) {
 		var timestamp = Math.round(new Date().getTime() / 1000);
 		var client_id = $('#colors a.active').attr("data-value");
 		var message = {"client_id": client_id, "route": "reading", "reading": data, "timestamp":timestamp};
 		socket.send(JSON.stringify(message));
+	}
+	if(bRecording) {
+		readings.push( data );
 	}
 
 	var wait = 500 + (Math.random() * 400);
-	readingTimeout = setTimeout(sendReading, wait);
+	readingTimeout = setTimeout(doReading, wait);
 }
 
-function sendBlink() {
+function doBlink() {
 	var data = {"blinkStrength" : 50 + Math.ceil(Math.random()*50) };
 	$("#tg_data").html(JSON.stringify(data, undefined, 2));
 
-	if(bSendingData) {
+	if(bStreaming) {
 		var timestamp = Math.round(new Date().getTime() / 1000);
 		var client_id = $('#colors a.active').attr("data-value");
 		var message = {"client_id": client_id, "route": "reading", "reading": data, "timestamp":timestamp};
 		socket.send(JSON.stringify(message));
 	}
 
+	if(bRecording) {
+		readings.push( data );
+	}
+
 	var wait = 800 + (Math.random() * 200);
-	blinkTimeout = setTimeout(sendBlink, wait);
+	blinkTimeout = setTimeout(doBlink, wait);
 }
 

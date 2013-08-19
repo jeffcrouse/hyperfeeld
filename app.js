@@ -107,6 +107,42 @@ http.createServer(app).listen(app.get('port'), function(){
 });
 
 
+/**************************************************************************************
+              $$\       $$\ $$\                            $$\                         
+              \__|      $$ |\__|                           $$ |                        
+$$$$$$\$$$$\  $$\  $$$$$$$ |$$\        $$$$$$$\  $$$$$$\ $$$$$$\   $$\   $$\  $$$$$$\  
+$$  _$$  _$$\ $$ |$$  __$$ |$$ |      $$  _____|$$  __$$\\_$$  _|  $$ |  $$ |$$  __$$\ 
+$$ / $$ / $$ |$$ |$$ /  $$ |$$ |      \$$$$$$\  $$$$$$$$ | $$ |    $$ |  $$ |$$ /  $$ |
+$$ | $$ | $$ |$$ |$$ |  $$ |$$ |       \____$$\ $$   ____| $$ |$$\ $$ |  $$ |$$ |  $$ |
+$$ | $$ | $$ |$$ |\$$$$$$$ |$$ |      $$$$$$$  |\$$$$$$$\  \$$$$  |\$$$$$$  |$$$$$$$  |
+\__| \__| \__|\__| \_______|\__|      \_______/  \_______|  \____/  \______/ $$  ____/ 
+                                                                             $$ |      
+                                                                             $$ |      
+                                                                             \__|      
+**************************************************************************************/
+
+
+var CHANNEL_NOTE_OFF = 128;
+var CHANNEL_NOTE_ON = 144;
+var CHANNEL_CONTROL_CHANGE = 176;
+var notes = { 
+	C:  60, Cs: 61,
+	D:  62, Ds: 63,
+	E:  64,
+	F:  65, Fs: 66,
+	G:  67, Gs: 68,
+	A:  69, As: 70,
+	B:  71
+}
+var midiOut = new midi.output();
+try {
+	midiOut.openPort(0);
+} catch(error) {
+	midiOut.openVirtualPort('tg_server');
+}
+process.on("SIGTERM", function(){
+	midiOut.closePort();
+});
 
 
 
@@ -119,10 +155,9 @@ $$\    $$\ $$\ $$$$$$$$\         $$$$$$$\  $$$$$$\   $$$$$$\ $$\    $$\  $$$$$$\
   \$$$  /  $$ | $$  _/           \____$$\ $$   ____|$$ |       \$$$  /  $$   ____|$$ |      
    \$  /   $$ |$$$$$$$$\        $$$$$$$  |\$$$$$$$\ $$ |        \$  /   \$$$$$$$\ $$ |      
     \_/    \__|\________|$$$$$$\\_______/  \_______|\__|         \_/     \_______|\__|      
-                         \______|                                                           
-                                                                                            
-                                                                                            
+                         \______|                                                                                                                               
 *********************************************************************************************/
+
 var viz_clients = [];
 var viz_server = new WebSocketServer({port: 8080});
 console.log("visualization server running at ws://%s:8080", os.hostname());
@@ -180,33 +215,6 @@ viz_server.broadcast = function(message) {
 
 
 
-
-
-
-
-
-
-
-var CHANNEL_NOTE_OFF = 128;
-var CHANNEL_NOTE_ON = 144;
-var CHANNEL_CONTROL_CHANGE = 176;
-var notes = { 
-	C:  60, Cs: 61,
-	D:  62, Ds: 63,
-	E:  64,
-	F:  65, Fs: 66,
-	G:  67, Gs: 68,
-	A:  69, As: 70,
-	B:  71
-}
-var midiOut = new midi.output();
-try {
-	midiOut.openPort(0);
-} catch(error) {
-	midiOut.openVirtualPort('tg_server');
-}
-
-
 /*********************************************************************************************
   $$\                                                                                  
   $$ |                                                                                 
@@ -225,16 +233,16 @@ switch(os.hostname()) { // to do:  get rid of this -- in /simulator, just feed i
 	case "silo001": tg_ws_url = "ws://brainz.io:8081";	break;
 	default: tg_ws_url = util.format("ws://%s:8081", os.hostname()); break;
 }
-var tg_clients = [];
+//var tg_clients = [];
 var tg_server = new WebSocketServer({port: 8081});
 console.log("ThinkGear server running at %s", tg_ws_url);
 tg_server.on('connection', function(client) {
-	tg_clients.push( client );
+	//tg_clients.push( client );
 
 	var attention = attentionTarget = 0;
 	var meditation = meditationTarget = 0;
 	var client_id = null;
-	var updateInterval = setInterval(function(){
+	var update = function() {
 		attention += (attentionTarget-attention) / 10.0;
 		meditation += (meditationTarget-meditation) / 10.0;
 		if(client_id!=null) {
@@ -242,7 +250,8 @@ tg_server.on('connection', function(client) {
 			midiOut.sendMessage([CHANNEL_CONTROL_CHANGE, channel+0, attention]);
 			midiOut.sendMessage([CHANNEL_CONTROL_CHANGE, channel+1, meditation]);	
 		}
-	}, 100);
+	}
+	var updateInterval = setInterval(update, 100);
 
 	client.on('message', function(message) {
 		var message = JSON.parse(message);
@@ -277,52 +286,49 @@ tg_server.on('connection', function(client) {
 				var journey = new Journey({
 					readings: message.readings, 
 					client_id: parseInt(message.client_id), 
-					email: message.email
+					email: message.email,
+					created_at: new Date()
 				});
-				journey.created_at = new Date();
-				console.log("Saving Journey created_at "+journey.created_at)
+
 				journey.save(function(err, doc){
 					if(err) {
 						client.send(JSON.stringify({"route": "saveStatus", "status": err}));
 						console.log(err)
 					} else {
 						client.send(JSON.stringify({"route": "saveStatus", "status": "OK"}));
-					
 						var message = {"route": "journey", "journey": doc};
 						viz_server.broadcast(JSON.stringify(message));
-
-						readings = []
-						client.send(JSON.stringify({"route": "info", "numReadings": readings.length}));
 					}
 				});
 			}
-		}
-
-		if(message.route == "reset") {
-			readings = []
-			client.send(JSON.stringify({"route": "info", "numReadings": readings.length}));
 		}
 	});
 
 	client.on('close', function() {
 		clearInterval(updateInterval);
+		/*
 		var index = tg_clients.indexOf(client);
 		if(index != -1) {
 			console.log("removing client from list");
 			tg_clients.splice(index, 1);
 		}
-		console.log("client closed.")
+		*/
 	});
 });
 
 
-process.on("SIGTERM", function(){
-	midiOut.closePort();
-});
 
-
-
-
+/********************************************************************
+                                    $$\ $$\ $$\                     
+                                    $$ |$$ |\__|                    
+ $$$$$$\   $$$$$$\   $$$$$$\   $$$$$$$ |$$ |$$\ $$$$$$$\   $$$$$$\  
+$$  __$$\ $$  __$$\  \____$$\ $$  __$$ |$$ |$$ |$$  __$$\ $$  __$$\ 
+$$ |  \__|$$$$$$$$ | $$$$$$$ |$$ /  $$ |$$ |$$ |$$ |  $$ |$$$$$$$$ |
+$$ |      $$   ____|$$  __$$ |$$ |  $$ |$$ |$$ |$$ |  $$ |$$   ____|
+$$ |      \$$$$$$$\ \$$$$$$$ |\$$$$$$$ |$$ |$$ |$$ |  $$ |\$$$$$$$\ 
+\__|       \_______| \_______| \_______|\__|\__|\__|  \__| \_______|
+********************************************************************/                                                              
+                                                                    
 
 var rl = readline.createInterface(process.stdin, process.stdout, null);
 rl.setPrompt('> ');
