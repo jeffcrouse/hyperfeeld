@@ -25,6 +25,7 @@ $(document).ready(function() {
 	var oTable = $('#journeys').dataTable( {
 		"sScrollY": "600px",
 		"bPaginate": false,
+		"aaSorting": [[ 3, "asc" ]]
 	});
 
     socket = new WebSocket("ws://localhost:8080");
@@ -65,7 +66,7 @@ $(document).ready(function() {
 	*
 	*/
 	socket.onclose = function() {  
-		console.log.html('Socket Status: '+socket.readyState+' (Closed)');  
+		console.log('Socket Status: '+socket.readyState+' (Closed)');  
 	}          
 });
 
@@ -81,6 +82,12 @@ function removeJourney(_id) {
     });	
 }
 
+function pad(n, width, z) {
+	z = z || '0';
+	n = n + '';
+	return n.length >= width ? n : new Array(width - n.length + 1).join(z) + n;
+}
+
 
 /**
 *
@@ -88,14 +95,21 @@ function removeJourney(_id) {
 function addJourney(journey) {
 	var checkbox = '<input type="checkbox" name="journey" value="'+journey._id+'" />';
 	var email = journey.email || "";
-	var date = moment(journey.created_at).format('MMMM Do YYYY, h:mm:ss a');
+	var date = moment(journey.created_at).format('Do dddd, h:mm:ss a');
 	var color = colors[journey.client_id];
 	color = '<span style="color: #'+color.hex+'">'+color.name+"</span>";
 	var n_readings = journey.readings.length;
 	var start = new Date(journey.readings[0].date);
 	var end = new Date(journey.readings[n_readings-1].date);
 	
-	var duration = Math.round((end-start)/1000);;
+	var millis = end-start;
+
+
+	var hours = Math.floor(millis / 36e5),
+		mins = Math.floor((millis % 36e5) / 6e4),
+		secs = Math.floor((millis % 6e4) / 1000);
+		duration = pad(hours, 2)+':'+pad(mins, 2)+':'+pad(secs, 2);  
+
 	var data = [checkbox, journey._id, color, date, email, n_readings, duration];
 	$('#journeys').dataTable().fnAddData(data);
 }

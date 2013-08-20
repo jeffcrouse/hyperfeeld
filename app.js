@@ -30,7 +30,10 @@ var journeySchema = mongoose.Schema({
       created_at: { type: Date, default: Date.now }
     , client_id: String
     , email: String
-    , readings: [mongoose.Schema.Types.Mixed] 
+    , readings: [{
+    	  date: Date
+    	, data: mongoose.Schema.Types.Mixed
+    }] 
 });
 var Journey = mongoose.model('Journey', journeySchema);
 
@@ -187,7 +190,7 @@ viz_server.on('connection', function(client) {
 	// ON MESSAGE
 	client.on('message', function(message) {
 		message = JSON.parse(message);
-		
+
 		if(message.route=="removeJourney") {
 			console.log("removing "+message._id);
 			Journey.remove({_id: message._id}, function(err){
@@ -292,11 +295,25 @@ tg_server.on('connection', function(client) {
 			if(message.readings.length < 40) {
 				client.send(JSON.stringify({"route": "saveStatus", "status": "not enough readings"}));
 			} else {
+				// If it arrives with "timestamp" property, convert it to a JS date
+				if(message.timestamp) 
+					message.date = new Date(message.timestamp*1000);
+				
+				// Do the same for all of the readings...
+				message.readings.forEach(function(reading){
+					if(reading.timestamp) 
+						reading.date = new Date(reading.timestamp*1000);
+				});
+				
+				// for(var i=0; i<message.readings.length; i++) {
+				// 	if(message.readings[i].timestamp)
+				// 		message.readings[i].date = new Date(message.readings[i].timestamp);
+				// }
 				var journey = new Journey({
 					readings: message.readings, 
 					client_id: parseInt(message.client_id), 
 					email: message.email,
-					created_at: new Date()
+					created_at: message.date
 				});
 
 				journey.save(function(err, doc){
