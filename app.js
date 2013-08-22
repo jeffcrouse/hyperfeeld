@@ -78,6 +78,7 @@ app.get('/admin', function(req, res){
 		case "silo001": ws_url = "ws://brainz.io:8080"; break;
 		default: ws_url = "ws://localhost:8080"; break;
 	}
+	console.log("ws_url="+ws_url);
 	res.render("admin", {"ws_url": ws_url});
 });
 

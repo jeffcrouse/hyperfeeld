@@ -12,7 +12,6 @@ var attention = 0,
 	attention_y = Math.random();
 var meditation = 0,
 	meditation_y = Math.random();
-
 var sn = new SimplexNoise();
 $(init)
 
