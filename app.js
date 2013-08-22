@@ -11,7 +11,6 @@ var express = require('express')
 	, WebSocketServer = require('ws').Server
 	, os = require("os")
 	, util = require("util")
-	, midi = require('midi')
 	, readline = require('readline')
 /**
 *	Configure database
@@ -28,12 +27,17 @@ db.once('open', function(err) {
 
 var journeySchema = mongoose.Schema({
       created_at: { type: Date, default: Date.now }
-    , client_id: String
+    , client_id: Number
     , email: String
     , readings: [{
     	  date: Date
     	, data: mongoose.Schema.Types.Mixed
-    }] 
+    }]
+    , events: [{
+		  date: Date
+		, eventType: String
+		, data: mongoose.Schema.Types.Mixed
+    }]
 });
 var Journey = mongoose.model('Journey', journeySchema);
 
@@ -86,66 +90,48 @@ app.get('/simulator', function(req, res){
 	res.render("simulator", data);
 });
 
-app.get('/keyboard', function(req, res){
-
-})
-
 app.post('/submit/journey', function(req, res) {
-	var journey = new Journey(req.body);
+	var json = req.body; 
+	/*
+	if(json.timestamp) 
+		json.date = new Date(req.body.timestamp*1000);
+
+	if(json.readings.length<40) {
+		res.send({"status": "Not enough readings"});
+		return;
+	}
+	
+
+	json.readings.forEach(function(reading){
+		if(reading.timestamp) 
+			reading.date = new Date(reading.timestamp*1000);
+	});
+	*/
+	var journey = new Journey({
+		readings: json.readings, 
+		events: json.events,
+		client_id: parseInt(json.client_id), 
+		email: json.email,
+		created_at: json.date
+	});
+
 	journey.save(function(err, doc){
 		if(err) {
-			res.send({"error": err});
+			res.send({"status": err});
 			console.log(err)
 		} else {
-			viz_server.broadcast(JSON.stringify(doc));
 			res.send({"status": "OK"});
+			viz_server.broadcast(JSON.stringify({"route": "addJourney", "journey": doc}));
 		}
 	});
 });
 
 
+
 http.createServer(app).listen(app.get('port'), function(){
 	console.log("Express server listening on port " + app.get('port'));
-	rl.prompt();
 });
 
-
-/**************************************************************************************
-              $$\       $$\ $$\                            $$\                         
-              \__|      $$ |\__|                           $$ |                        
-$$$$$$\$$$$\  $$\  $$$$$$$ |$$\        $$$$$$$\  $$$$$$\ $$$$$$\   $$\   $$\  $$$$$$\  
-$$  _$$  _$$\ $$ |$$  __$$ |$$ |      $$  _____|$$  __$$\\_$$  _|  $$ |  $$ |$$  __$$\ 
-$$ / $$ / $$ |$$ |$$ /  $$ |$$ |      \$$$$$$\  $$$$$$$$ | $$ |    $$ |  $$ |$$ /  $$ |
-$$ | $$ | $$ |$$ |$$ |  $$ |$$ |       \____$$\ $$   ____| $$ |$$\ $$ |  $$ |$$ |  $$ |
-$$ | $$ | $$ |$$ |\$$$$$$$ |$$ |      $$$$$$$  |\$$$$$$$\  \$$$$  |\$$$$$$  |$$$$$$$  |
-\__| \__| \__|\__| \_______|\__|      \_______/  \_______|  \____/  \______/ $$  ____/ 
-                                                                             $$ |      
-                                                                             $$ |      
-                                                                             \__|      
-**************************************************************************************/
-
-
-var CHANNEL_NOTE_OFF = 128;
-var CHANNEL_NOTE_ON = 144;
-var CHANNEL_CONTROL_CHANGE = 176;
-var notes = { 
-	C:  60, Cs: 61,
-	D:  62, Ds: 63,
-	E:  64,
-	F:  65, Fs: 66,
-	G:  67, Gs: 68,
-	A:  69, As: 70,
-	B:  71
-}
-var midiOut = new midi.output();
-try {
-	midiOut.openPort(0);
-} catch(error) {
-	midiOut.openVirtualPort('tg_server');
-}
-process.on("SIGTERM", function(){
-	midiOut.closePort();
-});
 
 
 
@@ -174,10 +160,10 @@ viz_server.on('connection', function(client) {
 		if(err) {
 			console.log(err)
 		} else {
-			var message = {"route": "init", "journeys": docs};
-			client.send(JSON.stringify(message), function(error){ 
-				if(error) console.log(error);
-				else console.log("journeys sent.");
+			docs.forEach(function(doc){
+				client.send(JSON.stringify( {"route": "showJourney", "journey": doc}), function(error){ 
+					if(error) console.log(error);
+				});
 			});
 		}
 	});
@@ -241,23 +227,16 @@ $$$$$$\    $$$$$$\          $$$$$$$\  $$$$$$\   $$$$$$\ $$\    $$\  $$$$$$\   $$
           \$$$$$$  |                                                                   
            \______/                                                                    
 *********************************************************************************************/
-//var tg_clients = [];
+/*
 var tg_server = new WebSocketServer({port: 8081});
 console.log("BrainProxy server running at ws://%s:8081", os.hostname());
 tg_server.on('connection', function(client) {
 	//tg_clients.push( client );
 
-	var attention = attentionTarget = 0;
-	var meditation = meditationTarget = 0;
 	var client_id = null;
 	var update = function() {
 		attention += (attentionTarget-attention) / 10.0;
 		meditation += (meditationTarget-meditation) / 10.0;
-		if(client_id!=null) {
-			var channel = client_id * 10;
-			midiOut.sendMessage([CHANNEL_CONTROL_CHANGE, channel+0, attention]);
-			midiOut.sendMessage([CHANNEL_CONTROL_CHANGE, channel+1, meditation]);	
-		}
 	}
 	var updateInterval = setInterval(update, 100);
 
@@ -272,20 +251,11 @@ tg_server.on('connection', function(client) {
 		if(message.route == "reading") {
 			client_id = message.client_id;
 			console.log("reading from %s", message.client_id);
-			if(message.reading.blinkStrength && message.reading.blinkStrength > 60) {
-				var note =  notes["C"] + (message.client_id * 12);
-				var vel = message.reading.blinkStrength;
-				midiOut.sendMessage([CHANNEL_NOTE_ON, note, vel]);
-				setTimeout(function(){
-					midiOut.sendMessage([CHANNEL_NOTE_OFF, note, vel]);
-				}, 200);
-			}
-			if(message.reading.eSenseMeditation) {
+			if(message.reading.eSenseMeditation) 
 				meditationTarget = message.reading.eSenseMeditation;
-			}
-			if(message.reading.eSenseAttention) {
+
+			if(message.reading.eSenseAttention) 
 				attentionTarget = message.reading.eSenseAttention;
-			}
 		}
 
 		if(message.route == "submit") {
@@ -331,17 +301,46 @@ tg_server.on('connection', function(client) {
 
 	client.on('close', function() {
 		clearInterval(updateInterval);
-		/*
-		var index = tg_clients.indexOf(client);
-		if(index != -1) {
-			console.log("removing client from list");
-			tg_clients.splice(index, 1);
-		}
-		*/
 	});
 });
+*/
 
-
+/**************************************************************************************
+              $$\       $$\ $$\                            $$\                         
+              \__|      $$ |\__|                           $$ |                        
+$$$$$$\$$$$\  $$\  $$$$$$$ |$$\        $$$$$$$\  $$$$$$\ $$$$$$\   $$\   $$\  $$$$$$\  
+$$  _$$  _$$\ $$ |$$  __$$ |$$ |      $$  _____|$$  __$$\\_$$  _|  $$ |  $$ |$$  __$$\ 
+$$ / $$ / $$ |$$ |$$ /  $$ |$$ |      \$$$$$$\  $$$$$$$$ | $$ |    $$ |  $$ |$$ /  $$ |
+$$ | $$ | $$ |$$ |$$ |  $$ |$$ |       \____$$\ $$   ____| $$ |$$\ $$ |  $$ |$$ |  $$ |
+$$ | $$ | $$ |$$ |\$$$$$$$ |$$ |      $$$$$$$  |\$$$$$$$\  \$$$$  |\$$$$$$  |$$$$$$$  |
+\__| \__| \__|\__| \_______|\__|      \_______/  \_______|  \____/  \______/ $$  ____/ 
+                                                                             $$ |      
+                                                                             $$ |      
+                                                                             \__|      
+**************************************************************************************/
+/*
+var CHANNEL_NOTE_OFF = 128;
+var CHANNEL_NOTE_ON = 144;
+var CHANNEL_CONTROL_CHANGE = 176;
+var notes = { 
+	C:  60, Cs: 61,
+	D:  62, Ds: 63,
+	E:  64,
+	F:  65, Fs: 66,
+	G:  67, Gs: 68,
+	A:  69, As: 70,
+	B:  71
+}
+var midiOut = new midi.output();
+try {
+	midiOut.openPort(0);
+} catch(error) {
+	midiOut.openVirtualPort('tg_server');
+}
+process.on("SIGTERM", function(){
+	midiOut.closePort();
+});
+*/
 
 /********************************************************************
                                     $$\ $$\ $$\                     
@@ -353,8 +352,7 @@ $$ |      $$   ____|$$  __$$ |$$ |  $$ |$$ |$$ |$$ |  $$ |$$   ____|
 $$ |      \$$$$$$$\ \$$$$$$$ |\$$$$$$$ |$$ |$$ |$$ |  $$ |\$$$$$$$\ 
 \__|       \_______| \_______| \_______|\__|\__|\__|  \__| \_______|
 ********************************************************************/                                                              
-                                                                    
-
+/*
 var rl = readline.createInterface(process.stdin, process.stdout, null);
 rl.setPrompt('> ');
 rl.on('line', function(input) {
@@ -416,4 +414,4 @@ rl.on('close', function() {
 	midiOut.closePort();
 	process.exit();
 });
-
+*/

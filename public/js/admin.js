@@ -23,8 +23,9 @@ $(document).ready(function() {
 
 
 	var oTable = $('#journeys').dataTable( {
-		"sScrollY": "600px",
-		"bPaginate": false,
+		//"sScrollY": "600px",
+		//"bPaginate": false,
+		"iDisplayLength": 50,
 		"aaSorting": [[ 3, "asc" ]]
 	});
 
@@ -34,7 +35,7 @@ $(document).ready(function() {
 	*
 	*/
 	socket.onopen = function(){  
-		console.log('Socket Status: '+socket.readyState+' (open)');  
+		$("#socketStatus").html('Socket Status: '+socket.readyState+' (open)');  
 	}  
 
 	/**
@@ -43,15 +44,13 @@ $(document).ready(function() {
 	socket.onmessage = function(msg){  
 		//console.log(msg);
 		var json = JSON.parse(msg.data);
-		if(json.route=="init") {
-			json.journeys.forEach(function(journey){
-				addJourney(journey);
-			});
+		if(json.route=="showJourney") {
+			addJourney(json.journey);
 		}
 		else if(json.route=="tick") {
 
 		}
-		else if(json.route=="journey"){
+		else if(json.route=="addJourney"){
 			addJourney(json.journey);
 		}
 		else if(json.route=="removeJourney") {
@@ -66,7 +65,7 @@ $(document).ready(function() {
 	*
 	*/
 	socket.onclose = function() {  
-		console.log('Socket Status: '+socket.readyState+' (Closed)');  
+		$("#socketStatus").html('Socket Status: '+socket.readyState+' (Closed)');  
 	}          
 });
 
