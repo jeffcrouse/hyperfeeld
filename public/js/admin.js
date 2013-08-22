@@ -7,7 +7,7 @@ var colors = [
 	, {"name": "Indigo", "hex": "8366D4"}
 	, {"name": "Violet", "hex": "E33BCF"}
 ]
-var socket;
+
 $(document).ready(function() {
 
 	$("#btn-delete").click(function(){
@@ -29,7 +29,7 @@ $(document).ready(function() {
 		"aaSorting": [[ 3, "asc" ]]
 	});
 
-    socket = new WebSocket("ws://localhost:8080");
+    var socket = new WebSocket(ws_url);
 
 	/**
 	*
@@ -72,12 +72,10 @@ $(document).ready(function() {
 function removeJourney(_id) {
 	console.log("Removing: "+_id)
     $("#journeys tr td").each(function() {
-
     	if($(this).text() == _id) {
     		var tr = $(this).parent('tr').get(0);
     		$('#journeys').dataTable().fnDeleteRow(tr);
     	}
-
     });	
 }
 
