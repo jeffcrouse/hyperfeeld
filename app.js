@@ -10,6 +10,7 @@ var express = require('express')
 	, mongoose = require('mongoose')
 	, WebSocketServer = require('ws').Server
 	, os = require("os")
+	, fs = require("fs")
 	, util = require("util")
 	, readline = require('readline')
 /**
@@ -98,21 +99,6 @@ app.get('/simulator', function(req, res){
 
 app.post('/submit/journey', function(req, res) {
 	var json = req.body; 
-	/*
-	if(json.timestamp) 
-		json.date = new Date(req.body.timestamp*1000);
-
-	if(json.readings.length<40) {
-		res.send({"status": "Not enough readings"});
-		return;
-	}
-	
-
-	json.readings.forEach(function(reading){
-		if(reading.timestamp) 
-			reading.date = new Date(reading.timestamp*1000);
-	});
-	*/
 	var journey = new Journey({
 		readings: json.readings, 
 		events: json.events,
@@ -132,7 +118,18 @@ app.post('/submit/journey', function(req, res) {
 	});
 });
 
-
+app.post('/submit/video', function(req, res){
+	if(!req.body.journey_id) {
+		res.send({"status": "No journey_id provided"});
+		return;
+	}
+	fs.readFile(req.files.video.path, function (err, data) {
+		var newPath = util.format("%s/uploads/%s.mov", __dirname, req.body.journey_id);
+		fs.writeFile(newPath, data, function (err) {
+			res.send({"status": "OK"});
+		});
+	});
+});
 
 http.createServer(app).listen(app.get('port'), function(){
 	console.log("Express server listening on port " + app.get('port'));
