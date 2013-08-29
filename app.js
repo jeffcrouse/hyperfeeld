@@ -13,22 +13,27 @@ var express = require('express')
 	, fs = require("fs")
 	, util = require("util")
 	, readline = require('readline')
+
+
 /**
 *	Configure database
 */
-mongoose.connect('mongodb://hyperfeel:pinguinshavefeelings@ds035237.mongolab.com:35237/hyperfeel');
+//mongoose.connect('mongodb://hyperfeel:pinguinshavefeelings@ds035237.mongolab.com:35237/hyperfeel');
+mongoose.connect('mongodb://localhost/hyperfeel');
 var db = mongoose.connection;
 db.on('error', console.error.bind(console, 'connection error:'));
 db.once('open', function(err) {
 	if(err) {
 		console.log("Couldn't connect to database!")
 		process.exit();
+	} else {
+		console.log("Connected to database.")
 	}
 });
 
 var journeySchema = mongoose.Schema({
       created_at: { type: Date, default: Date.now }
-    , client_id: Number
+    , client_id: String
     , email: String
     , readings: [{
     	  date: Date
@@ -85,6 +90,7 @@ app.get('/admin', function(req, res){
 
 app.get('/simulator', function(req, res){
 	var data = {"title": "Simulator"};
+	/*
 	data.colors = [
 		  {"name": "Red", "hex": "FF6363"}
 		, {"name": "Orange", "hex": "FFB62E"}
@@ -94,7 +100,13 @@ app.get('/simulator', function(req, res){
 		, {"name": "Indigo", "hex": "8366D4"}
 		, {"name": "Violet", "hex": "E33BCF"}
 	];
+	*/
 	res.render("simulator", data);
+});
+
+app.get("/ping", function(req, res){
+	var client_id = req.query.client_id;
+	res.send("OK");
 });
 
 app.post('/submit/journey', function(req, res) {
@@ -102,7 +114,7 @@ app.post('/submit/journey', function(req, res) {
 	var journey = new Journey({
 		readings: json.readings, 
 		events: json.events,
-		client_id: parseInt(json.client_id), 
+		client_id: json.client_id, 
 		email: json.email,
 		created_at: json.date
 	});
@@ -208,6 +220,7 @@ viz_server.on('connection', function(client) {
 	})
 });
 viz_server.broadcast = function(message) {
+	console.log("Broadcasting: "+message);
 	for(var i=0; i<viz_clients.length; i++) {
 		viz_clients[i].send(message, function(err){})
 	}

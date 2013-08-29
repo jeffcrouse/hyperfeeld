@@ -1,6 +1,6 @@
 
-$('#colors a[data-value="2"]').addClass("active");
-//var socket;
+$('#client_id a[data-value="Sim2"]').addClass("active");
+
 var blinkTimeout;
 var readingTimeout;
 var journeyDuration = 0;
@@ -16,8 +16,8 @@ var sn = new SimplexNoise();
 $(init)
 
 function init() {
-	$("#colors a").click(function(){
-		$("#colors a").removeClass("active");
+	$("#client_id a").click(function(){
+		$("#client_id a").removeClass("active");
 		$(this).addClass("active");
 	});
 
@@ -68,10 +68,17 @@ function submit() {
 	bRecording = false;
 	$("#btn-record").text("Record");
 
-	var client_id = parseInt($('#colors a.active').attr("data-value"));
-	var journey = {"client_id": client_id, "date": new Date(), "readings": readings, "events": events};
-
-
+	var email = prompt("Please enter your email (optional)","someone@somewhere.com");
+	var client_id = $('#client_id a.active').attr("data-value");
+	var journey = {
+		"date": new Date(), 
+		"client_id": client_id, 
+		"email": email,
+		"readings": readings, 
+		"events": events
+	};
+	console.log(journey);
+	
 	$.ajax({
 		type: "POST",
 		url: "/submit/journey",
@@ -106,24 +113,27 @@ function doReading() {
 		"date": new Date(),
 		"data": { "attention" : attention, "meditation" : meditation }
 	}
-	//console.log(reading);
 	$("#readings").html(JSON.stringify(reading, undefined, 2));
 
-	if(bRecording) {
+	if(bRecording) 
 		readings.push( reading );
-	}
 
 	var wait = 1000 + (Math.random() * 300);
 	readingTimeout = setTimeout(doReading, wait);
 }
 
 function doBlink() {
-	var data = {"eventType": "blink", 'date': new Date(), "data": {"strength": 50 + Math.ceil(Math.random()*50)} };
+	var data = {
+		'date': new Date(), 
+		"eventType": "blink", 
+		"data": {
+				"strength": 50 + Math.ceil(Math.random()*50)
+		} 
+	};
 	$("#events").html(JSON.stringify(data, undefined, 2));
 
-	if(bRecording) {
+	if(bRecording)
 		events.push( data);
-	}
 
 	var wait = 800 + (Math.random() * 200);
 	blinkTimeout = setTimeout(doBlink, wait);
