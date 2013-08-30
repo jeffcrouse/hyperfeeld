@@ -38,6 +38,8 @@ $(document).ready(function() {
 	*/
 	socket.onopen = function(){  
 		$("#socketStatus").html('Socket Status: '+socket.readyState+' (open)');  
+		console.log(JSON.stringify({"route": "initMe"}));
+		socket.send(JSON.stringify({"route": "initMe"}));
 	}  
 
 	/**
