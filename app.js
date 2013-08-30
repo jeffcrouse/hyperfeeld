@@ -13,7 +13,7 @@ var express = require('express')
 	, fs = require("fs")
 	, util = require("util")
 	, readline = require('readline')
-
+	, check = require('validator').check
 
 /**
 *	Configure database
@@ -34,7 +34,7 @@ db.once('open', function(err) {
 var journeySchema = mongoose.Schema({
       created_at: { type: Date, default: Date.now }
     , client_id: String
-    , email: String
+    , email: { type: String }
     , readings: [{
     	  date: Date
     	, data: mongoose.Schema.Types.Mixed
@@ -46,8 +46,6 @@ var journeySchema = mongoose.Schema({
     }]
 });
 var Journey = mongoose.model('Journey', journeySchema);
-
-
 
 /**
 *	Configure app
@@ -111,6 +109,17 @@ app.get("/ping", function(req, res){
 
 app.post('/submit/journey', function(req, res) {
 	var json = req.body; 
+
+	if(json.email!==null && json.email.length>0) 
+	{
+		try {
+			check(json.email, 'Please enter a valid email').len(6,64).isEmail();
+		} catch (e) {
+			res.send({"status": e.message});
+			return;
+		}
+	}
+
 	var journey = new Journey({
 		readings: json.readings, 
 		events: json.events,
@@ -170,23 +179,11 @@ viz_server.on('connection', function(client) {
 	console.log("viz client connected");
 
 	// Send all of the existing 
-	console.log("sending all journeys...");
-	Journey.find().sort('-created_at').exec(function(err, docs){
-		if(err) {
-			console.log(err)
-		} else {
-			docs.forEach(function(doc){
-				client.send(JSON.stringify( {"route": "showJourney", "journey": doc}), function(error){ 
-					if(error) console.log(error);
-				});
-			});
-		}
-	});
-
 	var tick = setInterval(function(){
 		var msg = {"route": "tick", "date": new Date()};
 		client.send(JSON.stringify(msg), function(error){ if(error) console.log(error) });
 	}, 1000);
+
 
 	// ON MESSAGE
 	client.on('message', function(message) {
@@ -199,6 +196,21 @@ viz_server.on('connection', function(client) {
 					client.send(JSON.stringify({"route": "error", "error": err}))
 				else 
 					client.send(JSON.stringify({"route": "removeJourney", "_id": message._id}))
+			});
+		}
+
+		if(message.route=="initMe") {
+			console.log("sending all journeys...");
+			Journey.find().sort('-created_at').exec(function(err, docs){
+				if(err) {
+					console.log(err)
+				} else {
+					docs.forEach(function(doc){
+						client.send(JSON.stringify( {"route": "showJourney", "journey": doc}), function(error){ 
+							if(error) console.log(error);
+						});
+					});
+				}
 			});
 		}
 	});
@@ -220,7 +232,7 @@ viz_server.on('connection', function(client) {
 	})
 });
 viz_server.broadcast = function(message) {
-	console.log("Broadcasting: "+message);
+	//console.log("Broadcasting: "+message);
 	for(var i=0; i<viz_clients.length; i++) {
 		viz_clients[i].send(message, function(err){})
 	}
