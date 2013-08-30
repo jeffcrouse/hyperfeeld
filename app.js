@@ -199,7 +199,7 @@ viz_server.on('connection', function(client) {
 			});
 		}
 
-		if(message.route=="initMe") {
+		else if(message.route=="initMe") {
 			console.log("sending all journeys...");
 			Journey.find().sort('-created_at').exec(function(err, docs){
 				if(err) {
@@ -210,6 +210,18 @@ viz_server.on('connection', function(client) {
 							if(error) console.log(error);
 						});
 					});
+				}
+			});
+		}
+
+		else if(message.route=="replayJourney") {
+			var _id = message._id;
+			Journey.findById(_id, function (err, doc) {
+				if(err) {
+					console.log(err);
+				} else {
+					console.log("replaying "+_id);
+					viz_server.broadcast(JSON.stringify({"route": "replayJourney", "journey": doc}));
 				}
 			});
 		}

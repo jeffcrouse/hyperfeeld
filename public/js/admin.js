@@ -1,14 +1,4 @@
-/*
-var colors = [
-	  {"name": "Red", "hex": "FF6363"}
-	, {"name": "Orange", "hex": "FFB62E"}
-	, {"name": "Yellow", "hex": "DEDE40"}
-	, {"name": "Green", "hex": "4FE63C"}
-	, {"name": "Blue", "hex": "00B7C4"}
-	, {"name": "Indigo", "hex": "8366D4"}
-	, {"name": "Violet", "hex": "E33BCF"}
-]
-*/
+var socket;
 
 $(document).ready(function() {
 
@@ -23,7 +13,6 @@ $(document).ready(function() {
 		});
 	});
 
-
 	var oTable = $('#journeys').dataTable( {
 		//"sScrollY": "600px",
 		//"bPaginate": false,
@@ -31,7 +20,7 @@ $(document).ready(function() {
 		"aaSorting": [[ 3, "asc" ]]
 	});
 
-    var socket = new WebSocket(ws_url);
+    socket = new WebSocket(ws_url);
 
 	/**
 	*
@@ -60,6 +49,7 @@ $(document).ready(function() {
 		else if(json.route=="removeJourney") {
 			removeJourney(json._id)
 		}
+		else if(json.route=="replayJourney") {}
 		else {
 			console.log("unknown route!")
 		}
@@ -90,6 +80,11 @@ function pad(n, width, z) {
 }
 
 
+function replay(_id) {
+	console.log(JSON.stringify({"route": "replayJourney", "_id": _id}));
+	socket.send(JSON.stringify({"route": "replayJourney", "_id": _id}));
+}
+
 /**
 *
 */
@@ -103,13 +98,13 @@ function addJourney(journey) {
 	var end = new Date(journey.readings[n_readings-1].date);
 	var millis = end-start;
 	var client_id = journey.client_id || "";
-
+	var replay = '<a href="javascript:replay(\''+journey._id+'\');">replay</a>';
 	var hours = Math.floor(millis / 36e5),
 		mins = Math.floor((millis % 36e5) / 6e4),
 		secs = Math.floor((millis % 6e4) / 1000);
 		duration = pad(hours, 2)+':'+pad(mins, 2)+':'+pad(secs, 2);  
 
-	var data = [checkbox, journey._id, client_id, date, email, n_readings, duration];
+	var data = [checkbox, journey._id, client_id, date, email, n_readings, duration, replay];
 	$('#journeys').dataTable().fnAddData(data);
 }
 
