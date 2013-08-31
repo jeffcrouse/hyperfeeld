@@ -1,6 +1,10 @@
 var socket;
+var ctx;
+var journeys = {};
 
 $(document).ready(function() {
+
+	ctx = document.getElementById("myChart").getContext("2d");
 
 	$("#btn-delete").click(function(){
 		console.log("btn-delete");
@@ -38,15 +42,18 @@ $(document).ready(function() {
 		//console.log(msg);
 		var json = JSON.parse(msg.data);
 		if(json.route=="showJourney") {
+			journeys[json.journey._id] = json.journey;
 			addJourney(json.journey);
 		}
 		else if(json.route=="tick") {
 
 		}
 		else if(json.route=="addJourney"){
+			journeys[json.journey._id] = json.journey;
 			addJourney(json.journey);
 		}
 		else if(json.route=="removeJourney") {
+			delete journeys[json._id];
 			removeJourney(json._id)
 		}
 		else if(json.route=="replayJourney") {}
@@ -60,8 +67,70 @@ $(document).ready(function() {
 	*/
 	socket.onclose = function() {  
 		$("#socketStatus").html('Socket Status: '+socket.readyState+' (Closed)');  
-	}          
+	}       
 });
+
+
+function graphJourney(_id) {
+
+	var meditation = {
+		fillColor : "rgba(220,220,220,0.5)",
+		strokeColor : "rgba(220,220,220,1)",
+		pointColor : "rgba(220,220,220,1)",
+		pointStrokeColor : "#fff",
+		data: []
+	};
+	var attention = {
+		fillColor : "rgba(151,187,205,0.5)",
+		strokeColor : "rgba(151,187,205,1)",
+		pointColor : "rgba(151,187,205,1)",
+		pointStrokeColor : "#fff",
+		data : []
+	};
+	var data = {
+		labels: [],
+		datasets: [attention, meditation]
+	};
+
+	var start = journeys[_id].readings[0].date;
+	journeys[_id].readings.forEach(function(reading, idx){
+		if(idx%2==0) {
+			var millis = moment(reading.date).diff( start, 'milliseconds' );
+			var mins = Math.floor((millis % 36e5) / 6e4),
+				secs = Math.floor((millis % 6e4) / 1000);
+				duration = mins+':'+pad(secs, 2);  
+
+			data.labels.push( duration );
+			meditation.data.push( reading.data.meditation );
+			attention.data.push( reading.data.attention );
+		}
+	});
+
+
+	/*
+	var data = {
+		labels : ["January","February","March","April","May","June","July"],
+		datasets : [
+			{
+				fillColor : "rgba(220,220,220,0.5)",
+				strokeColor : "rgba(220,220,220,1)",
+				pointColor : "rgba(220,220,220,1)",
+				pointStrokeColor : "#fff",
+				data : [65,59,90,81,56,55,40]
+			},
+			{
+				fillColor : "rgba(151,187,205,0.5)",
+				strokeColor : "rgba(151,187,205,1)",
+				pointColor : "rgba(151,187,205,1)",
+				pointStrokeColor : "#fff",
+				data : [28,48,40,19,96,27,100]
+			}
+		]
+	}
+	*/
+	var options = {scaleOverlay: true, scaleOverride: true, scaleSteps: 10, scaleStepWidth: 10, scaleStartValue: 0};
+	var myNewChart = new Chart(ctx).Line(data, options);  
+}
 
 function removeJourney(_id) {
 	console.log("Removing: "+_id)
@@ -89,8 +158,8 @@ function replay(_id) {
 *
 */
 function addJourney(journey) {
-
 	var checkbox = '<input type="checkbox" name="journey" value="'+journey._id+'" />';
+	var id = '<a href="javascript:graphJourney(\''+journey._id+'\');">'+journey._id+'</a>';;
 	var email = journey.email || "";
 	var date = moment(journey.created_at).format('Do dddd, h:mm:ss a');
 	var n_readings = journey.readings.length;
@@ -104,7 +173,7 @@ function addJourney(journey) {
 		secs = Math.floor((millis % 6e4) / 1000);
 		duration = pad(hours, 2)+':'+pad(mins, 2)+':'+pad(secs, 2);  
 
-	var data = [checkbox, journey._id, client_id, date, email, n_readings, duration, replay];
+	var data = [checkbox, id, client_id, date, email, n_readings, duration, replay];
 	$('#journeys').dataTable().fnAddData(data);
 }
 
