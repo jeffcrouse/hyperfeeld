@@ -201,7 +201,7 @@ viz_server.on('connection', function(client) {
 
 		else if(message.route=="initMe") {
 			console.log("sending all journeys...");
-			Journey.find().sort('-created_at').exec(function(err, docs){
+			Journey.find().sort('-created_at').limit(30).exec(function(err, docs){
 				if(err) {
 					console.log(err)
 				} else {
@@ -246,7 +246,9 @@ viz_server.on('connection', function(client) {
 viz_server.broadcast = function(message) {
 	//console.log("Broadcasting: "+message);
 	for(var i=0; i<viz_clients.length; i++) {
-		viz_clients[i].send(message, function(err){})
+		viz_clients[i].send(message, function(err){
+			if(err) console.log(err);
+		})
 	}
 }
 
