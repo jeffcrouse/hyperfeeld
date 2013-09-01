@@ -201,7 +201,7 @@ viz_server.on('connection', function(client) {
 
 		else if(message.route=="initMe") {
 			console.log("sending all journeys...");
-			Journey.find().sort('-created_at').limit(30).exec(function(err, docs){
+			Journey.find().sort({ created_at: 'asc'}).limit(30).exec(function(err, docs){
 				if(err) {
 					console.log(err)
 				} else {
