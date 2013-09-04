@@ -20,8 +20,8 @@ $(document).ready(function() {
 	var oTable = $('#journeys').dataTable( {
 		//"sScrollY": "600px",
 		//"bPaginate": false,
-		"iDisplayLength": 50,
-		"aaSorting": [[ 3, "asc" ]]
+		//"iDisplayLength": 50,
+		"aaSorting": [[ 3, "desc" ]]
 	});
 
     socket = new WebSocket(ws_url);
@@ -106,28 +106,6 @@ function graphJourney(_id) {
 		}
 	});
 
-
-	/*
-	var data = {
-		labels : ["January","February","March","April","May","June","July"],
-		datasets : [
-			{
-				fillColor : "rgba(220,220,220,0.5)",
-				strokeColor : "rgba(220,220,220,1)",
-				pointColor : "rgba(220,220,220,1)",
-				pointStrokeColor : "#fff",
-				data : [65,59,90,81,56,55,40]
-			},
-			{
-				fillColor : "rgba(151,187,205,0.5)",
-				strokeColor : "rgba(151,187,205,1)",
-				pointColor : "rgba(151,187,205,1)",
-				pointStrokeColor : "#fff",
-				data : [28,48,40,19,96,27,100]
-			}
-		]
-	}
-	*/
 	var options = {scaleOverlay: true, scaleOverride: true, scaleSteps: 10, scaleStepWidth: 10, scaleStartValue: 0};
 	var myNewChart = new Chart(ctx).Line(data, options);  
 }
@@ -161,7 +139,7 @@ function addJourney(journey) {
 	var checkbox = '<input type="checkbox" name="journey" value="'+journey._id+'" />';
 	var id = '<a href="javascript:graphJourney(\''+journey._id+'\');">'+journey._id+'</a>';;
 	var email = journey.email || "";
-	var date = moment(journey.created_at).format('Do dddd, h:mm:ss a');
+	var date = moment(journey.created_at).format();
 	var n_readings = journey.readings.length;
 	var start = new Date(journey.readings[0].date);
 	var end = new Date(journey.readings[n_readings-1].date);
